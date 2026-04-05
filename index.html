@@ -2,25 +2,18 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <!-- Crucial meta tags for making it look and feel like a native iPhone app -->
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <title>Elevate Fitness</title>
   
-  <!-- Load Tailwind CSS for styling -->
   <script src="https://cdn.tailwindcss.com"></script>
-  
-  <!-- Load React & ReactDOM -->
   <script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
   <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
-  
-  <!-- Load Babel to understand React syntax in the browser -->
   <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
 
   <style>
-    body { background-color: #09090b; /* Deep zinc-950 background */ }
-    /* Hide scrollbars for a clean, app-like look */
+    body { background-color: #09090b; }
     .no-scrollbar::-webkit-scrollbar { display: none; }
     .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
   </style>
@@ -28,11 +21,67 @@
 <body>
   <div id="root"></div>
 
-  <!-- Main Application Code -->
   <script type="text/babel">
     const { useState, useEffect, useRef } = React;
 
-    // Custom Icon component to ensure icons load offline/on home screen perfectly
+    const apiKey = "";
+
+    // Exponential Backoff Fetch Wrapper
+    const fetchWithRetry = async (url, options) => {
+      const delays = [1000, 2000, 4000, 8000, 16000];
+      for (let i = 0; i < 5; i++) {
+        try {
+          const res = await fetch(url, options);
+          if (!res.ok) throw new Error(`API Error: ${res.status}`);
+          return await res.json();
+        } catch (err) {
+          if (i === 4) throw err;
+          await new Promise(r => setTimeout(r, delays[i]));
+        }
+      }
+    };
+
+    // Helper: Convert PCM to Playable WAV Blob
+    const playAudioFromBase64PCM = (base64Data, sampleRate) => {
+      const binaryString = window.atob(base64Data);
+      const len = binaryString.length;
+      const bytes = new Uint8Array(len);
+      for (let i = 0; i < len; i++) {
+        bytes[i] = binaryString.charCodeAt(i);
+      }
+      
+      const buffer = new ArrayBuffer(44 + len);
+      const view = new DataView(buffer);
+      
+      const writeString = (view, offset, string) => {
+        for (let i = 0; i < string.length; i++) {
+          view.setUint8(offset + i, string.charCodeAt(i));
+        }
+      };
+      
+      writeString(view, 0, 'RIFF');
+      view.setUint32(4, 36 + len, true);
+      writeString(view, 8, 'WAVE');
+      writeString(view, 12, 'fmt ');
+      view.setUint32(16, 16, true);
+      view.setUint16(20, 1, true);
+      view.setUint16(22, 1, true); // 1 channel
+      view.setUint32(24, sampleRate, true);
+      view.setUint32(28, sampleRate * 2, true);
+      view.setUint16(32, 2, true);
+      view.setUint16(34, 16, true);
+      writeString(view, 36, 'data');
+      view.setUint32(40, len, true);
+      
+      const pcmBytes = new Uint8Array(buffer, 44, len);
+      pcmBytes.set(bytes);
+      
+      const blob = new Blob([buffer], { type: 'audio/wav' });
+      const url = URL.createObjectURL(blob);
+      const audio = new Audio(url);
+      audio.play();
+    };
+
     const Icon = ({ name, className }) => {
       const icons = {
         ChevronRight: <path d="m9 18 6-6-6-6"/>,
@@ -45,12 +94,12 @@
         Calendar: <><rect width="18" height="18" x="3" y="4" rx="2" ry="2"/><line x1="16" x2="16" y1="2" y2="6"/><line x1="8" x2="8" y1="2" y2="6"/><line x1="3" x2="21" y1="10" y2="10"/></>,
         Play: <polygon points="6 3 20 12 6 21 6 3"/>,
         RotateCcw: <><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></>,
-        MessageCircle: <path d="M7.9 20A9 9 0 1 0 4 16.1L2 22Z"/>,
         X: <><path d="M18 6 6 18"/><path d="m6 6 12 12"/></>,
-        Send: <><path d="m22 2-7 20-4-9-9-4Z"/><path d="M22 2 11 13"/></>,
         Loader2: <path d="M21 12a9 9 0 1 1-6.219-8.56"/>,
         Trash2: <><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/><line x1="10" x2="10" y1="11" y2="17"/><line x1="14" x2="14" y1="11" y2="17"/></>,
-        Plus: <><path d="M5 12h14"/><path d="M12 5v14"/></>
+        Plus: <><path d="M5 12h14"/><path d="M12 5v14"/></>,
+        Wand2: <><path d="m21.64 3.64-1.28-1.28a1.21 1.21 0 0 0-1.72 0L2.36 18.64a1.21 1.21 0 0 0 0 1.72l1.28 1.28a1.2 1.2 0 0 0 1.72 0L21.64 5.36a1.2 1.2 0 0 0 0-1.72Z"/><path d="m14 7 3 3"/><path d="M5 6v4"/><path d="M19 14v4"/><path d="M10 2v2"/><path d="M7 8H3"/><path d="M21 16h-4"/><path d="M11 3H9"/></>,
+        Volume2: <><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14"/></>
       };
       return (
         <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
@@ -60,7 +109,7 @@
     };
 
     const WorkoutApp = () => {
-      const [currentView, setCurrentView] = useState('dashboard'); // dashboard, workout, summary, add-workout
+      const [currentView, setCurrentView] = useState('dashboard');
       const [selectedDay, setSelectedDay] = useState(null);
       const [activeStep, setActiveStep] = useState(0);
       const [timer, setTimer] = useState(0);
@@ -69,38 +118,13 @@
       const [now, setNow] = useState(new Date());
       const [workoutToDelete, setWorkoutToDelete] = useState(null);
 
-      // AI Chat State
-      const [isChatOpen, setIsChatOpen] = useState(false);
-      const [messages, setMessages] = useState([
-        { role: 'model', text: "Hello! I'm your Elevate virtual coach." },
-        { role: 'model', text: "I'm here to support your fitness journey. You can ask me to:\n\n• Answer questions about form and technique\n• Suggest modifications if an exercise hurts\n• Give nutrition and recovery advice\n• **Generate entirely new custom workouts** for your dashboard!\n\nHow can I help you today?" }
-      ]);
-      const [inputText, setInputText] = useState("");
-      const [isLoadingAI, setIsLoadingAI] = useState(false);
-      const messagesEndRef = useRef(null);
+      // AI Features State
+      const [showAIModal, setShowAIModal] = useState(false);
+      const [aiPrompt, setAiPrompt] = useState("");
+      const [isGeneratingAI, setIsGeneratingAI] = useState(false);
+      const [aiGenerationStatus, setAiGenerationStatus] = useState("");
+      const [aiError, setAiError] = useState("");
 
-      const apiKey = "";
-      const systemPrompt = `You are an elite, supportive personal trainer embedded in a premium fitness app. Your client is a 58-year-old woman focused on leg strength, toning, and safe exercising using light dumbbells, a workout bench, and a yoga mat. Keep answers concise, encouraging, and highly professional. Do not mention you are an AI directly. Act as her dedicated virtual coach, 'Elevate Coach'. Use formatting like bullet points if helpful for readability.
-
-CRITICAL INSTRUCTION FOR NEW WORKOUTS:
-If the user explicitly asks you to create a new workout, routine, or exercise plan, you MUST include a valid JSON block in your response containing the workout data. Format it EXACTLY like this example:
-\`\`\`json
-{
-  "title": "New Custom Routine Name",
-  "focus": "Body Part Focus",
-  "duration": "20 min",
-  "difficulty": "Moderate",
-  "image": "https://images.unsplash.com/photo-1571019614242-c5c5dee9f50b?q=80&w=800&auto=format&fit=crop",
-  "exercises": [
-    { "name": "Warm-up: ...", "reps": "...", "type": "warmup", "detail": "..." },
-    { "name": "...", "reps": "...", "type": "strength", "detail": "...", "equipment": "Dumbbell" },
-    { "name": "Cool-down: ...", "reps": "...", "type": "cooldown", "detail": "..." }
-  ]
-}
-\`\`\`
-Always include warm-ups (type: "warmup") and cool-downs (type: "cooldown"). Only use her available equipment. Speak to her normally before or after the JSON block.`;
-
-      // Workout Data tailored for 58F, Leg focus, 20-30 mins
       const initialWorkouts = [
         {
           id: 1,
@@ -137,24 +161,6 @@ Always include warm-ups (type: "warmup") and cool-downs (type: "cooldown"). Only
             { name: "Cool-down: Overhead Tricep Stretch", reps: "30 seconds per side", type: "cooldown", detail: "Reach one arm straight up, bend elbow so hand touches upper back. Gently push elbow back with opposite hand." },
             { name: "Cool-down: Cobra Stretch", reps: "1 minute", type: "cooldown", detail: "Lie face down, hands under shoulders. Gently press up to lift chest, keeping hips glued to mat and shoulders relaxed down." },
           ]
-        },
-        {
-          id: 3,
-          title: "Leg Sculpt & Stability",
-          focus: "Lower Body & Balance",
-          duration: "28 min",
-          difficulty: "Moderate",
-          image: "https://images.unsplash.com/photo-1518611012118-696072aa579a?q=80&w=800&auto=format&fit=crop",
-          exercises: [
-            { name: "Warm-up: Dynamic Leg Swings", reps: "1 minute per leg", type: "warmup", detail: "Hold bench for balance. Smoothly swing one leg forward and backward, gradually increasing the range of motion." },
-            { name: "Warm-up: Bird-Dog", reps: "1 minute", type: "warmup", detail: "On all fours. Extend opposite arm and leg straight out. Keep back completely flat and hips square to the mat." },
-            { name: "Dumbbell Lunges", reps: "3 sets of 10 per leg", detail: "Hold dumbbells at sides. Step forward and lower hips until both knees are at 90-degree angles. Push firmly back to start.", equipment: "Dumbbells" },
-            { name: "Bench Squat-to-Sit", reps: "3 sets of 15", detail: "Stand slightly in front of bench. Push hips back to lightly tap glutes to bench, then immediately drive back up to standing.", equipment: "Bench" },
-            { name: "Side-Lying Leg Lifts", reps: "3 sets of 15 per side", detail: "Lie on side, body in a straight line. Lift top leg smoothly without rocking hips backward. Lower with slow control.", equipment: "Mat" },
-            { name: "Plank with Leg Lifts", reps: "3 sets of 10", detail: "From a forearm plank, slowly lift one straight leg a few inches off the floor. Squeeze glute tightly, do not arch lower back.", equipment: "Mat" },
-            { name: "Cool-down: Hamstring Stretch", reps: "1 minute per side", type: "cooldown", detail: "Sit on mat, one leg straight, other foot touching inner thigh. Reach toward straight leg's toes while keeping back flat." },
-            { name: "Cool-down: Deep Glute Stretch", reps: "1 minute per side", type: "cooldown", detail: "Lie on back, cross right ankle over left knee. Grab behind left thigh and pull toward chest until you feel a deep stretch." },
-          ]
         }
       ];
 
@@ -177,84 +183,83 @@ Always include warm-ups (type: "warmup") and cool-downs (type: "cooldown"). Only
         return () => clearInterval(timeInterval);
       }, []);
 
-      const scrollToBottom = () => {
-        messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-      };
-
-      useEffect(() => {
-        if (isChatOpen) {
-          scrollToBottom();
-        }
-      }, [messages, isChatOpen]);
-
-      const handleSendMessage = async () => {
-        if (!inputText.trim()) return;
-        const userText = inputText.trim();
-        setInputText("");
-        
-        const newMessages = [...messages, { role: 'user', text: userText }];
-        setMessages(newMessages);
-        setIsLoadingAI(true);
-
-        const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${apiKey}`;
-
-        const formattedContents = newMessages.map(msg => ({
-            role: msg.role === 'model' ? 'model' : 'user',
-            parts: [{ text: msg.text }]
-        }));
-
+      const generateWorkoutJSON = async (prompt) => {
         const payload = {
-            contents: formattedContents,
-            systemInstruction: { parts: [{ text: systemPrompt }] }
-        };
-
-        const delays = [1000, 2000, 4000, 8000, 16000];
-        
-        for (let i = 0; i < 5; i++) {
-            try {
-                const response = await fetch(url, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(payload)
-                });
-                
-                if (!response.ok) throw new Error('API Error');
-                
-                const result = await response.json();
-                const aiResponseText = result.candidates?.[0]?.content?.parts?.[0]?.text;
-                
-                if (aiResponseText) {
-                    let finalMessage = aiResponseText;
-                    
-                    // Check if the AI generated a workout JSON block
-                    const jsonMatch = aiResponseText.match(/\`\`\`(?:json)?\s*([\s\S]*?)\s*\`\`\`/i);
-                    if (jsonMatch) {
-                        try {
-                            const newWorkout = JSON.parse(jsonMatch[1]);
-                            newWorkout.id = Date.now(); // Generate a unique ID for the new workout
-                            setWorkouts(prev => [...prev, newWorkout]);
-                            
-                            // Replace the JSON block in the chat with a user-friendly confirmation
-                            finalMessage = aiResponseText.replace(jsonMatch[0], "\n\n*(✨ I've successfully designed and added this new workout to your dashboard!)*");
-                        } catch (e) {
-                            console.error("Failed to parse workout JSON", e);
+            contents: [{ parts: [{ text: `Create a custom, premium workout for a 58-year old woman based on this request: "${prompt}". Her goal is strength and toning. She has a workout bench, light dumbbells, and a yoga mat.` }] }],
+            generationConfig: {
+                responseMimeType: "application/json",
+                responseSchema: {
+                    type: "OBJECT",
+                    properties: {
+                        title: { type: "STRING" },
+                        focus: { type: "STRING" },
+                        duration: { type: "STRING" },
+                        difficulty: { type: "STRING" },
+                        imagePrompt: { type: "STRING", description: "A detailed prompt for an AI image generator to create a photorealistic cover image for this exact workout routine in a premium boutique gym. Focus on the equipment and atmosphere." },
+                        exercises: {
+                            type: "ARRAY",
+                            items: {
+                                type: "OBJECT",
+                                properties: {
+                                    name: { type: "STRING" },
+                                    reps: { type: "STRING" },
+                                    type: { type: "STRING", description: "Must be exactly: warmup, strength, or cooldown" },
+                                    detail: { type: "STRING", description: "Form instructions" },
+                                    equipment: { type: "STRING" }
+                                },
+                                required: ["name", "reps", "type"]
+                            }
                         }
-                    }
-                    
-                    setMessages(prev => [...prev, { role: 'model', text: finalMessage }]);
-                    break;
-                } else {
-                     throw new Error('Invalid response format');
-                }
-            } catch (err) {
-                if (i === 4) {
-                    setMessages(prev => [...prev, { role: 'model', text: "I'm having a little trouble connecting right now. Please check your connection or try again in a moment." }]);
-                } else {
-                    await new Promise(res => setTimeout(res, delays[i]));
+                    },
+                    required: ["title", "focus", "duration", "difficulty", "imagePrompt", "exercises"]
                 }
             }
+        };
+        const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${apiKey}`;
+        const data = await fetchWithRetry(url, { method: 'POST', body: JSON.stringify(payload), headers: {'Content-Type': 'application/json'} });
+        return JSON.parse(data.candidates[0].content.parts[0].text);
+      };
+
+      const generateImage = async (prompt) => {
+        const url = `https://generativelanguage.googleapis.com/v1beta/models/imagen-4.0-generate-001:predict?key=${apiKey}`;
+        const payload = {
+            instances: { prompt: prompt },
+            parameters: { sampleCount: 1 }
+        };
+        const data = await fetchWithRetry(url, { method: 'POST', body: JSON.stringify(payload), headers: {'Content-Type': 'application/json'} });
+        if (data && data.predictions && data.predictions[0]) {
+            return `data:image/png;base64,${data.predictions[0].bytesBase64Encoded}`;
         }
-        setIsLoadingAI(false);
+        return null;
+      };
+
+      const handleGenerateAIWorkout = async () => {
+        if (!aiPrompt.trim() || isGeneratingAI) return;
+        setAiError("");
+        setIsGeneratingAI(true);
+        
+        try {
+            setAiGenerationStatus("Designing your routine...");
+            const workoutData = await generateWorkoutJSON(aiPrompt);
+            
+            setAiGenerationStatus("Generating cover image...");
+            let coverImg = "https://images.unsplash.com/photo-1571019614242-c5c5dee9f50b?q=80&w=800&auto=format&fit=crop";
+            try {
+                const generatedImg = await generateImage(workoutData.imagePrompt);
+                if (generatedImg) coverImg = generatedImg;
+            } catch (imgError) {
+                console.error("Image generation failed, falling back to default.", imgError);
+            }
+
+            const finalWorkout = { ...workoutData, id: Date.now(), image: coverImg };
+            setWorkouts(prev => [...prev, finalWorkout]);
+            setShowAIModal(false);
+            setAiPrompt("");
+        } catch (error) {
+            console.error("AI Generation failed:", error);
+            setAiError("Failed to generate workout. Please ensure your API key is correct.");
+        }
+        setIsGeneratingAI(false);
       };
 
       const formatTime = (seconds) => {
@@ -281,110 +286,8 @@ Always include warm-ups (type: "warmup") and cool-downs (type: "cooldown"). Only
         }
       };
 
-      // Parses basic markdown **bold** text for a premium chat display
-      const renderMessageText = (text) => {
-        return text.split('\n').map((line, i) => {
-          const parts = line.split(/(\*\*.*?\*\*)/g);
-          return (
-            <React.Fragment key={i}>
-              {parts.map((part, j) => {
-                if (part.startsWith('**') && part.endsWith('**')) {
-                  return <strong key={j} className="text-amber-500 font-bold">{part.slice(2, -2)}</strong>;
-                }
-                return part;
-              })}
-              {i !== text.split('\n').length - 1 && <br />}
-            </React.Fragment>
-          );
-        });
-      };
-
-      const AddWorkoutForm = () => {
-        const [title, setTitle] = useState('');
-        const [focus, setFocus] = useState('Full Body');
-        const [difficulty, setDifficulty] = useState('Moderate');
-        const [duration, setDuration] = useState('20 min');
-        const [exercisesText, setExercisesText] = useState('');
-
-        const handleSave = () => {
-          const exerciseLines = exercisesText.split('\n').filter(line => line.trim());
-          const exercises = exerciseLines.map(line => ({
-             name: line.trim(),
-             reps: "Custom",
-             type: "strength",
-             equipment: "Varies"
-          }));
-
-          const newWorkout = {
-            id: Date.now(),
-            title: title.trim() || 'Custom Routine',
-            focus,
-            duration,
-            difficulty,
-            image: "https://images.unsplash.com/photo-1571019614242-c5c5dee9f50b?q=80&w=800&auto=format&fit=crop",
-            exercises: exercises.length > 0 ? exercises : [{ name: "Custom Exercise", reps: "3 sets of 10", type: "strength" }]
-          };
-
-          setWorkouts(prev => [...prev, newWorkout]);
-          setCurrentView('dashboard');
-        };
-
-        return (
-          <div className="bg-zinc-950 min-h-screen flex flex-col relative overflow-hidden text-zinc-100">
-            <div className="p-4 flex items-center justify-between border-b border-zinc-800 bg-zinc-900/50 backdrop-blur-md">
-              <button onClick={() => setCurrentView('dashboard')} className="p-2 bg-zinc-900 rounded-full border border-zinc-800 text-zinc-100 active:scale-95 transition-all">
-                <Icon name="ArrowLeft" className="w-6 h-6" />
-              </button>
-              <h2 className="font-bold text-zinc-100">Add Custom Routine</h2>
-              <div className="w-10" />
-            </div>
-
-            <div className="p-6 flex-1 overflow-y-auto space-y-6 pb-24">
-               <div>
-                  <label className="text-xs font-bold text-zinc-500 uppercase tracking-widest mb-2 block">Routine Title</label>
-                  <input type="text" value={title} onChange={e=>setTitle(e.target.value)} placeholder="e.g., Sunday Core Burn" className="w-full bg-zinc-900 border border-zinc-800 rounded-xl p-4 text-zinc-100 focus:border-amber-500 focus:outline-none transition-colors" />
-               </div>
-               
-               <div className="grid grid-cols-2 gap-4">
-                  <div>
-                     <label className="text-xs font-bold text-zinc-500 uppercase tracking-widest mb-2 block">Focus</label>
-                     <select value={focus} onChange={e=>setFocus(e.target.value)} className="w-full bg-zinc-900 border border-zinc-800 rounded-xl p-4 text-zinc-100 focus:border-amber-500 focus:outline-none appearance-none transition-colors">
-                        <option>Upper Body</option>
-                        <option>Lower Body</option>
-                        <option>Core</option>
-                        <option>Full Body</option>
-                     </select>
-                  </div>
-                  <div>
-                     <label className="text-xs font-bold text-zinc-500 uppercase tracking-widest mb-2 block">Difficulty</label>
-                     <select value={difficulty} onChange={e=>setDifficulty(e.target.value)} className="w-full bg-zinc-900 border border-zinc-800 rounded-xl p-4 text-zinc-100 focus:border-amber-500 focus:outline-none appearance-none transition-colors">
-                        <option>Light</option>
-                        <option>Moderate</option>
-                        <option>Hard</option>
-                     </select>
-                  </div>
-               </div>
-
-               <div>
-                  <label className="text-xs font-bold text-zinc-500 uppercase tracking-widest mb-2 block">Duration (mins)</label>
-                  <input type="text" value={duration} onChange={e=>setDuration(e.target.value)} placeholder="e.g., 20 min" className="w-full bg-zinc-900 border border-zinc-800 rounded-xl p-4 text-zinc-100 focus:border-amber-500 focus:outline-none transition-colors" />
-               </div>
-
-               <div>
-                  <label className="text-xs font-bold text-zinc-500 uppercase tracking-widest mb-2 block">Exercises (One per line)</label>
-                  <textarea value={exercisesText} onChange={e=>setExercisesText(e.target.value)} placeholder="Goblet Squats - 3 sets of 12&#10;Bench Step-ups - 3 sets of 10" rows={5} className="w-full bg-zinc-900 border border-zinc-800 rounded-xl p-4 text-zinc-100 focus:border-amber-500 focus:outline-none resize-none transition-colors" />
-               </div>
-               
-               <button onClick={handleSave} className="w-full bg-amber-500 text-zinc-950 py-5 rounded-2xl font-bold flex items-center justify-center gap-2 shadow-[0_4px_20px_rgba(245,158,11,0.3)] active:scale-95 transition-all mt-4">
-                  Save Routine
-               </button>
-            </div>
-          </div>
-        );
-      };
-
       const Dashboard = () => (
-        <div className="p-6 max-w-md mx-auto bg-zinc-950 min-h-screen text-zinc-100">
+        <div className="p-6 max-w-md mx-auto bg-zinc-950 min-h-screen text-zinc-100 pb-32">
           <header className="mb-8 mt-4 relative rounded-3xl overflow-hidden h-48 flex items-end p-6 shadow-lg shadow-zinc-900/50">
             <div className="absolute top-5 right-5 z-20 text-right">
               <p className="text-zinc-100 text-sm font-bold tracking-wide drop-shadow-md">
@@ -398,7 +301,6 @@ Always include warm-ups (type: "warmup") and cool-downs (type: "cooldown"). Only
               src="https://images.unsplash.com/photo-1534438327276-14e5300c3a48?q=80&w=1470&auto=format&fit=crop" 
               alt="Premium Gym Background" 
               className="absolute inset-0 w-full h-full object-cover"
-              onError={(e) => e.target.style.display = 'none'}
             />
             <div className="absolute inset-0 bg-gradient-to-t from-zinc-950 via-zinc-950/60 to-transparent" />
             <div className="relative z-10">
@@ -429,18 +331,12 @@ Always include warm-ups (type: "warmup") and cool-downs (type: "cooldown"). Only
 
           <div className="flex justify-between items-center mb-4">
             <h3 className="text-sm font-bold uppercase tracking-widest text-zinc-500">Your Routines</h3>
-            <button 
-              onClick={() => setCurrentView('add-workout')}
-              className="text-amber-500 flex items-center gap-1 text-xs font-bold uppercase tracking-wider hover:text-amber-400 transition-colors"
-            >
-              <Icon name="Plus" className="w-4 h-4" /> Add New
-            </button>
           </div>
 
           <div className="space-y-4">
             {workouts.length === 0 && (
               <div className="text-center py-8 text-zinc-500 text-sm border border-dashed border-zinc-800 rounded-2xl">
-                No routines yet. Create one manually or ask the AI Coach!
+                No routines yet. Generate one to get started!
               </div>
             )}
             {workouts.map((workout) => (
@@ -450,19 +346,14 @@ Always include warm-ups (type: "warmup") and cool-downs (type: "cooldown"). Only
                 className="w-full text-left relative overflow-hidden rounded-2xl shadow-sm border border-zinc-800 flex items-center justify-between group active:scale-[0.98] transition-all min-h-[120px]"
               >
                 <img 
-                  src={workout.image || "https://images.unsplash.com/photo-1571019614242-c5c5dee9f50b?q=80&w=800&auto=format&fit=crop"} 
+                  src={workout.image} 
                   alt={workout.title}
                   className="absolute inset-0 w-full h-full object-cover opacity-30 group-hover:opacity-40 transition-opacity duration-500"
-                  onError={(e) => e.target.style.display = 'none'}
                 />
                 <div className="absolute inset-0 bg-gradient-to-r from-zinc-900 via-zinc-900/90 to-transparent" />
                 
-                {/* Delete Button */}
                 <div 
-                  onClick={(e) => { 
-                    e.stopPropagation(); 
-                    setWorkoutToDelete(workout.id); 
-                  }}
+                  onClick={(e) => { e.stopPropagation(); setWorkoutToDelete(workout.id); }}
                   className="absolute top-3 right-3 p-2 bg-zinc-950/60 backdrop-blur-md rounded-full text-zinc-400 hover:text-red-400 border border-zinc-700/50 hover:border-red-500/50 z-20 transition-colors"
                 >
                   <Icon name="Trash2" className="w-4 h-4" />
@@ -491,16 +382,12 @@ Always include warm-ups (type: "warmup") and cool-downs (type: "cooldown"). Only
             ))}
           </div>
           
-          <footer className="mt-12 pb-24 text-center text-zinc-600 text-xs pt-8">
-            Designed for Excellence.
-          </footer>
-          
-          {/* Floating Action Button for AI Coach */}
+          {/* Floating Action Button for AI Generation */}
           <button 
-            onClick={() => setIsChatOpen(true)}
-            className="fixed bottom-6 right-6 bg-amber-500 text-zinc-950 p-4 rounded-full shadow-[0_4px_20px_rgba(245,158,11,0.4)] hover:scale-105 active:scale-95 transition-all z-40 flex items-center gap-2"
+            onClick={() => setShowAIModal(true)}
+            className="fixed bottom-6 right-6 bg-amber-500 text-zinc-950 px-6 py-4 rounded-full shadow-[0_4px_20px_rgba(245,158,11,0.4)] hover:scale-105 active:scale-95 transition-all z-40 flex items-center gap-2 font-bold"
           >
-            <Icon name="MessageCircle" className="w-6 h-6" />
+            <Icon name="Wand2" className="w-5 h-5" /> Auto-Generate
           </button>
         </div>
       );
@@ -510,20 +397,48 @@ Always include warm-ups (type: "warmup") and cool-downs (type: "cooldown"). Only
         const isWarmup = exercise.type === 'warmup';
         const isCooldown = exercise.type === 'cooldown';
         const progress = ((activeStep + 1) / selectedDay.exercises.length) * 100;
+        
+        const [isSpeaking, setIsSpeaking] = useState(false);
+
+        const handleSpeakExercise = async (ex) => {
+          if (isSpeaking) return;
+          setIsSpeaking(true);
+          try {
+            const textToSpeak = `Next exercise: ${ex.name}. ${ex.reps}. ${ex.detail || ''}`;
+            const payload = { 
+                contents: [{ parts: [{ text: textToSpeak }] }], 
+                generationConfig: { 
+                    responseModalities: ["AUDIO"], 
+                    speechConfig: { voiceConfig: { prebuiltVoiceConfig: { voiceName: "Kore" } } } 
+                }, 
+                model: "gemini-2.5-flash-preview-tts" 
+            };
+            const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-tts:generateContent?key=${apiKey}`;
+            const data = await fetchWithRetry(url, { method: 'POST', body: JSON.stringify(payload), headers: {'Content-Type': 'application/json'} });
+            
+            const base64 = data.candidates[0].content.parts[0].inlineData.data;
+            const mimeType = data.candidates[0].content.parts[0].inlineData.mimeType;
+            let sampleRate = 24000;
+            const rateMatch = mimeType.match(/rate=(\d+)/);
+            if (rateMatch) sampleRate = parseInt(rateMatch[1], 10);
+            
+            playAudioFromBase64PCM(base64, sampleRate);
+          } catch(e) {
+            console.error("Text-to-Speech failed:", e);
+          }
+          setIsSpeaking(false);
+        };
 
         return (
           <div className="bg-zinc-950 min-h-screen flex flex-col relative overflow-hidden text-zinc-100">
-            {/* Full Screen Immersive Background */}
             <img 
-              src={selectedDay.image || "https://images.unsplash.com/photo-1571019614242-c5c5dee9f50b?q=80&w=800&auto=format&fit=crop"} 
+              src={selectedDay.image} 
               alt={selectedDay.title}
               className="absolute inset-0 w-full h-full object-cover opacity-30 blur-sm scale-105"
-              onError={(e) => e.target.style.display = 'none'}
             />
             <div className="absolute inset-0 bg-gradient-to-b from-zinc-950/60 via-zinc-950/80 to-zinc-950/95" />
 
             <div className="relative z-10 flex flex-col h-full flex-1">
-              {/* Header */}
               <div className="p-4 flex items-center justify-between">
                 <button onClick={() => setCurrentView('dashboard')} className="p-2 bg-zinc-900/50 rounded-full backdrop-blur-md border border-zinc-800 text-zinc-100 hover:bg-zinc-800 transition-colors">
                   <Icon name="ArrowLeft" className="w-6 h-6" />
@@ -535,7 +450,6 @@ Always include warm-ups (type: "warmup") and cool-downs (type: "cooldown"). Only
                 <div className="w-10" />
               </div>
 
-              {/* Progress Bar */}
               <div className="h-1 bg-zinc-800/50 w-full mt-2 backdrop-blur-sm">
                 <div 
                   className="h-full bg-amber-500 transition-all duration-500 shadow-[0_0_10px_rgba(245,158,11,0.5)]" 
@@ -543,13 +457,9 @@ Always include warm-ups (type: "warmup") and cool-downs (type: "cooldown"). Only
                 />
               </div>
 
-              {/* Main Content */}
               <div className="flex-1 flex flex-col p-6 items-center justify-center text-center">
-                
-                {/* Glassmorphism Exercise Card */}
                 <div className="bg-zinc-900/40 backdrop-blur-xl p-8 rounded-[2rem] border border-zinc-700/30 w-full max-w-sm shadow-2xl flex flex-col items-center relative overflow-hidden">
                   
-                  {/* Type Badge inside card */}
                   <div className="mb-6">
                     {isWarmup ? (
                       <div className="bg-orange-500/20 text-orange-400 border border-orange-500/30 px-4 py-1.5 rounded-full text-xs font-bold uppercase tracking-widest flex items-center gap-2 backdrop-blur-md">
@@ -566,8 +476,15 @@ Always include warm-ups (type: "warmup") and cool-downs (type: "cooldown"). Only
                     )}
                   </div>
 
-                  <h3 className="text-3xl font-serif font-bold text-zinc-100 mb-6 leading-tight drop-shadow-md">
+                  <h3 className="text-3xl font-serif font-bold text-zinc-100 mb-6 leading-tight drop-shadow-md flex items-center justify-center gap-3">
                     {exercise.name}
+                    <button 
+                      onClick={() => handleSpeakExercise(exercise)} 
+                      disabled={isSpeaking}
+                      className="p-2.5 bg-amber-500/20 text-amber-500 rounded-full active:scale-95 transition-all hover:bg-amber-500/30"
+                    >
+                      {isSpeaking ? <Icon name="Loader2" className="w-5 h-5 animate-spin" /> : <Icon name="Volume2" className="w-5 h-5" />}
+                    </button>
                   </h3>
                   
                   <div className="text-5xl font-light text-amber-500 mb-8 font-sans drop-shadow-lg">
@@ -588,7 +505,6 @@ Always include warm-ups (type: "warmup") and cool-downs (type: "cooldown"). Only
                 </div>
               </div>
 
-              {/* Controls */}
               <div className="p-6 space-y-4 pb-10 max-w-md mx-auto w-full">
                 <button 
                   onClick={nextStep}
@@ -617,9 +533,7 @@ Always include warm-ups (type: "warmup") and cool-downs (type: "cooldown"). Only
         <div className="bg-zinc-950 min-h-screen text-zinc-100 p-8 flex flex-col items-center justify-center text-center relative overflow-hidden">
           <img 
             src="https://images.unsplash.com/photo-1552674605-db6ffd4facb5?q=80&w=800&auto=format&fit=crop"
-            alt="Success Celebration"
             className="absolute inset-0 w-full h-full object-cover opacity-10"
-            onError={(e) => e.target.style.display = 'none'}
           />
           <div className="absolute inset-0 bg-gradient-to-t from-zinc-950 via-zinc-950/80 to-zinc-950/40" />
 
@@ -652,11 +566,10 @@ Always include warm-ups (type: "warmup") and cool-downs (type: "cooldown"). Only
       );
 
       return (
-        <div className="font-sans antialiased bg-zinc-950 relative">
+        <div className="font-sans antialiased bg-zinc-950 relative min-h-screen">
           {currentView === 'dashboard' && <Dashboard />}
           {currentView === 'workout' && <WorkoutPlayer />}
           {currentView === 'summary' && <Summary />}
-          {currentView === 'add-workout' && <AddWorkoutForm />}
 
           {/* Delete Confirmation Modal */}
           {workoutToDelete && (
@@ -688,98 +601,50 @@ Always include warm-ups (type: "warmup") and cool-downs (type: "cooldown"). Only
             </div>
           )}
 
-          {/* AI Coach Overlay */}
-          {isChatOpen && (
-            <div className="fixed inset-0 z-50 flex flex-col bg-zinc-950/95 backdrop-blur-md sm:p-4 animate-in fade-in duration-200">
-              <div className="flex-1 w-full max-w-md mx-auto bg-zinc-900 sm:rounded-[2rem] shadow-2xl border border-zinc-800 flex flex-col overflow-hidden">
+          {/* AI Generator Modal */}
+          {showAIModal && (
+            <div className="fixed inset-0 z-[60] bg-zinc-950/90 backdrop-blur-md flex items-center justify-center p-4 animate-in fade-in duration-200">
+              <div className="bg-zinc-900 border border-zinc-800 p-6 rounded-[2rem] max-w-sm w-full shadow-2xl relative">
+                <button 
+                  onClick={() => !isGeneratingAI && setShowAIModal(false)}
+                  className="absolute top-4 right-4 p-2 text-zinc-400 hover:text-zinc-100 bg-zinc-800/50 rounded-full transition-colors"
+                >
+                  <Icon name="X" className="w-5 h-5" />
+                </button>
                 
-                {/* Chat Header */}
-                <div className="p-4 border-b border-zinc-800 flex justify-between items-center bg-zinc-900/80 backdrop-blur-sm z-10">
-                  <div className="flex items-center gap-3">
-                    <div className="bg-amber-500/20 p-2 rounded-full border border-amber-500/30">
-                      <Icon name="Flame" className="w-5 h-5 text-amber-500" />
-                    </div>
-                    <div>
-                      <h3 className="font-bold text-zinc-100">Elevate Coach</h3>
-                      <p className="text-[10px] uppercase tracking-widest text-amber-500 font-bold">AI Assistant</p>
-                    </div>
-                  </div>
-                  <button 
-                    onClick={() => setIsChatOpen(false)}
-                    className="p-2 text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800 rounded-full transition-colors"
-                  >
-                    <Icon name="X" className="w-6 h-6" />
-                  </button>
+                <div className="bg-amber-500/10 w-16 h-16 rounded-full flex items-center justify-center mb-6 border border-amber-500/20">
+                  <Icon name="Wand2" className="w-8 h-8 text-amber-500" />
                 </div>
+                
+                <h3 className="text-xl font-bold text-zinc-100 mb-2">Design Your Workout</h3>
+                <p className="text-zinc-400 mb-6 text-sm">Tell your AI coach exactly what you need today. It will design the routine and create a custom cover image.</p>
+                
+                {aiError && (
+                  <div className="mb-4 p-3 bg-red-500/10 border border-red-500/30 rounded-xl text-red-400 text-xs">
+                    {aiError}
+                  </div>
+                )}
 
-                {/* Chat Messages */}
-                <div className="flex-1 overflow-y-auto p-4 space-y-4">
-                  {messages.map((msg, idx) => (
-                    <div key={idx} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-                      <div 
-                        className={`max-w-[80%] rounded-2xl p-4 text-sm ${
-                          msg.role === 'user' 
-                            ? 'bg-amber-500 text-zinc-950 rounded-tr-sm' 
-                            : 'bg-zinc-800 text-zinc-200 border border-zinc-700 rounded-tl-sm'
-                        }`}
-                      >
-                        {renderMessageText(msg.text)}
-                      </div>
-                    </div>
-                  ))}
-                  {isLoadingAI && (
-                    <div className="flex justify-start">
-                      <div className="bg-zinc-800 border border-zinc-700 rounded-2xl rounded-tl-sm p-4 text-zinc-400">
-                        <Icon name="Loader2" className="w-5 h-5 animate-spin" />
-                      </div>
-                    </div>
+                <textarea 
+                  value={aiPrompt}
+                  onChange={(e) => setAiPrompt(e.target.value)}
+                  disabled={isGeneratingAI}
+                  placeholder="e.g. A quick 15 minute core session focusing on stability..."
+                  className="w-full bg-zinc-950 border border-zinc-800 rounded-xl p-4 text-zinc-100 text-sm focus:outline-none focus:border-amber-500 transition-colors resize-none mb-4"
+                  rows={4}
+                />
+                
+                <button 
+                  onClick={handleGenerateAIWorkout}
+                  disabled={isGeneratingAI || !aiPrompt.trim()}
+                  className="w-full bg-amber-500 text-zinc-950 py-4 rounded-xl font-bold flex items-center justify-center gap-2 active:scale-95 transition-all disabled:opacity-50 disabled:active:scale-100"
+                >
+                  {isGeneratingAI ? (
+                    <><Icon name="Loader2" className="w-5 h-5 animate-spin" /> {aiGenerationStatus}</>
+                  ) : (
+                    "Generate Routine"
                   )}
-                  <div ref={messagesEndRef} />
-                </div>
-
-                {/* Suggested Prompts */}
-                <div className="px-4 pb-3 flex gap-2 overflow-x-auto no-scrollbar scroll-smooth">
-                  <button 
-                    onClick={() => setInputText("Generate a 15-minute core routine for me.")} 
-                    className="whitespace-nowrap text-xs bg-zinc-800 text-amber-500 px-4 py-2 rounded-full border border-amber-500/30 hover:bg-zinc-700 transition-colors"
-                  >
-                    ✨ Generate a core routine
-                  </button>
-                  <button 
-                    onClick={() => setInputText("What's the correct form for a Goblet Squat?")} 
-                    className="whitespace-nowrap text-xs bg-zinc-800 text-zinc-300 px-4 py-2 rounded-full border border-zinc-700 hover:bg-zinc-700 transition-colors"
-                  >
-                    Form: Goblet Squat
-                  </button>
-                  <button 
-                    onClick={() => setInputText("Can you modify step-ups to be easier on my knees?")} 
-                    className="whitespace-nowrap text-xs bg-zinc-800 text-zinc-300 px-4 py-2 rounded-full border border-zinc-700 hover:bg-zinc-700 transition-colors"
-                  >
-                    Modify Step-ups
-                  </button>
-                </div>
-
-                {/* Chat Input */}
-                <div className="p-4 bg-zinc-900 border-t border-zinc-800">
-                  <div className="relative flex items-center">
-                    <input 
-                      type="text"
-                      value={inputText}
-                      onChange={(e) => setInputText(e.target.value)}
-                      onKeyDown={(e) => e.key === 'Enter' && handleSendMessage()}
-                      placeholder="Ask your coach..."
-                      className="w-full bg-zinc-950 border border-zinc-800 rounded-full py-3 pl-5 pr-12 text-zinc-100 text-sm focus:outline-none focus:border-amber-500 transition-colors"
-                    />
-                    <button 
-                      onClick={handleSendMessage}
-                      disabled={isLoadingAI || !inputText.trim()}
-                      className="absolute right-2 p-2 bg-amber-500 text-zinc-950 rounded-full hover:bg-amber-400 disabled:opacity-50 disabled:hover:bg-amber-500 transition-colors"
-                    >
-                      <Icon name="Send" className="w-4 h-4" />
-                    </button>
-                  </div>
-                </div>
-                
+                </button>
               </div>
             </div>
           )}
@@ -787,7 +652,6 @@ Always include warm-ups (type: "warmup") and cool-downs (type: "cooldown"). Only
       );
     };
 
-    // Render the React application to the DOM
     const root = ReactDOM.createRoot(document.getElementById('root'));
     root.render(<WorkoutApp />);
   </script>
