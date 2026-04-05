@@ -1,0 +1,572 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    
+    <!-- Netlify & SEO Meta Tags -->
+    <title>FitFlow | Stronger & Defined Home Workouts</title>
+    <meta name="description" content="Custom 3-day workout routine for leg strength and body definition. Tailored for home workouts with light equipment.">
+    <meta property="og:title" content="FitFlow Sculpt | Martha's Personal Trainer">
+    <meta property="og:description" content="A tailored 25-30 minute workout plan for building strength and definition at home.">
+    <meta property="og:type" content="website">
+    
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <!-- Favicon (Emoji Fallback) -->
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>⚡</text></svg>">
+
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=Playfair+Display:wght@700&display=swap');
+        
+        body {
+            font-family: 'Outfit', sans-serif;
+            background-color: #fdfaf9;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        .heading-font {
+            font-family: 'Playfair Display', serif;
+        }
+
+        .active-tab {
+            border-bottom: 3px solid #8b5cf6;
+            color: #8b5cf6;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .animate-fade-in {
+            animation: fadeIn 0.4s ease-out forwards;
+        }
+
+        .check-btn-done {
+            background-color: #10b981 !important;
+            color: white !important;
+            border-color: #10b981 !important;
+        }
+
+        /* Video Modal Styles */
+        #video-modal {
+            transition: opacity 0.3s ease;
+        }
+        .modal-content {
+            transform: scale(0.95);
+            transition: transform 0.3s ease;
+        }
+        #video-modal.active .modal-content {
+            transform: scale(1);
+        }
+        
+        /* Netlify Hover Effects */
+        .hover-lift {
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+        .hover-lift:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 12px 20px -10px rgba(139, 92, 246, 0.2);
+        }
+    </style>
+</head>
+<body class="text-slate-700">
+
+    <!-- Navigation -->
+    <nav class="sticky top-0 z-50 bg-white/80 backdrop-blur-md border-b border-rose-100 px-4 py-3">
+        <div class="max-w-7xl mx-auto flex justify-between items-center">
+            <div class="flex items-center space-x-2">
+                <div class="bg-violet-600 p-2 rounded-xl shadow-lg shadow-violet-200">
+                    <i class="fas fa-skating text-white text-xl"></i>
+                </div>
+                <span class="text-2xl font-bold tracking-tight text-slate-800">FitFlow <span class="text-violet-600 font-medium text-lg">Sculpt</span></span>
+            </div>
+            <div class="hidden md:flex space-x-8 font-medium text-slate-500">
+                <button onclick="switchTab('dashboard')" id="tab-dashboard" class="hover:text-violet-600 transition active-tab py-2">Daily Goal</button>
+                <button onclick="switchTab('routines')" id="tab-routines" class="hover:text-violet-600 transition py-2">Tone & Strength</button>
+                <button onclick="switchTab('builder')" id="tab-builder" class="hover:text-violet-600 transition py-2">Builder</button>
+            </div>
+            <div class="flex items-center space-x-4">
+                <div class="text-right hidden sm:block">
+                    <p class="text-xs font-bold text-slate-400 uppercase leading-none">Goal</p>
+                    <p class="text-sm font-bold text-violet-600">Strong Legs & Definition</p>
+                </div>
+                <div class="w-10 h-10 rounded-full bg-violet-100 border-2 border-white shadow-sm flex items-center justify-center text-violet-500">
+                    <i class="fas fa-user"></i>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <main class="max-w-7xl mx-auto p-4 md:p-8">
+        
+        <!-- DASHBOARD SECTION -->
+        <section id="section-dashboard" class="animate-fade-in">
+            <div class="flex flex-col md:flex-row md:items-center justify-between mb-8 gap-4">
+                <div>
+                    <h1 class="heading-font text-4xl text-slate-900 leading-tight">Focusing on Strength, <br>Martha</h1>
+                    <p class="text-slate-500 mt-2">Week 4: Sculpting Lean Muscle</p>
+                </div>
+                <div class="flex space-x-3">
+                    <div class="bg-white p-4 rounded-2xl border border-rose-100 flex items-center space-x-4 shadow-sm">
+                        <div class="bg-violet-50 p-3 rounded-xl">
+                            <i class="fas fa-weight-hanging text-violet-500 text-lg"></i>
+                        </div>
+                        <div>
+                            <p class="text-[10px] text-slate-400 font-bold uppercase tracking-widest">Sets This Week</p>
+                            <p id="weekly-sets-count" class="font-bold text-slate-900">18 / 24</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                <div class="lg:col-span-2 space-y-6">
+                    <div class="bg-white rounded-3xl border border-rose-100 p-6 shadow-sm">
+                        <div class="flex justify-between items-center mb-8">
+                            <div>
+                                <h3 id="routine-title-display" class="font-bold text-xl text-slate-800">Day 2: Leg Definition & Glute Strength</h3>
+                                <p class="text-sm text-slate-500">28 Minutes • Mat, Bench & 5lb Dumbbells</p>
+                            </div>
+                            <span class="bg-emerald-100 text-emerald-700 px-4 py-1.5 rounded-full text-[10px] font-bold uppercase tracking-widest">Target: Sculpt</span>
+                        </div>
+                        
+                        <div id="active-workout-list" class="space-y-3">
+                            <!-- Step 1: Warm Up -->
+                            <div class="p-3 border-l-4 border-amber-300 bg-amber-50/30 mb-2 rounded-r-xl">
+                                <p class="text-[10px] font-bold text-amber-600 uppercase">Step 1: Metabolic Prep (5 mins)</p>
+                            </div>
+                            
+                            <div class="workout-item flex items-center justify-between p-4 bg-slate-50 rounded-2xl border border-slate-100 transition-all duration-300">
+                                <div class="flex items-center space-x-4">
+                                    <div class="w-8 h-8 bg-white rounded-full flex items-center justify-center text-xs font-bold text-violet-500 shadow-sm">1</div>
+                                    <div>
+                                        <h4 class="font-bold text-slate-800 text-sm">Dynamic Leg Swings</h4>
+                                        <p class="text-xs text-slate-500">15 reps per side • Balance support</p>
+                                        <button onclick="openVideo('Leg Swings', 'https://www.youtube.com/embed/5O1j5LIn_zM')" class="text-violet-600 text-[10px] font-bold mt-1 flex items-center hover:underline">
+                                            <i class="fas fa-play-circle mr-1"></i> WATCH DEMO
+                                        </button>
+                                    </div>
+                                </div>
+                                <button onclick="markDone(this)" class="p-2 w-10 h-10 rounded-full border border-slate-200 transition bg-white hover:border-emerald-500"><i class="fas fa-check"></i></button>
+                            </div>
+
+                            <div class="workout-item flex items-center justify-between p-4 bg-slate-50 rounded-2xl border border-slate-100 transition-all duration-300">
+                                <div class="flex items-center space-x-4">
+                                    <div class="w-8 h-8 bg-white rounded-full flex items-center justify-center text-xs font-bold text-violet-500 shadow-sm">2</div>
+                                    <div>
+                                        <h4 class="font-bold text-slate-800 text-sm">Arm Circles & Toe Taps</h4>
+                                        <p class="text-xs text-slate-500">2 Minutes - Low impact cardio</p>
+                                        <button onclick="openVideo('Arm Circles', 'https://www.youtube.com/embed/1vRTOpTf_m0')" class="text-violet-600 text-[10px] font-bold mt-1 flex items-center hover:underline">
+                                            <i class="fas fa-play-circle mr-1"></i> WATCH DEMO
+                                        </button>
+                                    </div>
+                                </div>
+                                <button onclick="markDone(this)" class="p-2 w-10 h-10 rounded-full border border-slate-200 transition bg-white hover:border-emerald-500"><i class="fas fa-check"></i></button>
+                            </div>
+
+                            <!-- Step 2: Main -->
+                            <div class="p-3 border-l-4 border-violet-500 bg-violet-50/30 my-2 rounded-r-xl">
+                                <p class="text-[10px] font-bold text-violet-600 uppercase">Step 2: Strength & Sculpt (18 mins)</p>
+                            </div>
+
+                            <div class="workout-item flex items-center justify-between p-4 bg-white rounded-2xl border-2 border-violet-100 transition-all duration-300">
+                                <div class="flex items-center space-x-4">
+                                    <div class="w-8 h-8 bg-violet-500 rounded-full flex items-center justify-center text-xs font-bold text-white shadow-sm">3</div>
+                                    <div>
+                                        <h4 class="font-bold text-slate-800 text-sm">Bench Step-Ups</h4>
+                                        <p class="text-xs text-slate-500">3 Sets of 12 Reps • Using Bench</p>
+                                        <button onclick="openVideo('Bench Step-Ups', 'https://www.youtube.com/embed/dQqApCGd5Ss')" class="text-violet-600 text-[10px] font-bold mt-1 flex items-center hover:underline">
+                                            <i class="fas fa-play-circle mr-1"></i> WATCH DEMO
+                                        </button>
+                                    </div>
+                                </div>
+                                <button onclick="markDone(this)" class="p-2 w-10 h-10 rounded-full border border-slate-200 transition bg-white hover:border-emerald-500"><i class="fas fa-check"></i></button>
+                            </div>
+
+                            <div class="workout-item flex items-center justify-between p-4 bg-white rounded-2xl border-2 border-violet-100 transition-all duration-300">
+                                <div class="flex items-center space-x-4">
+                                    <div class="w-8 h-8 bg-violet-500 rounded-full flex items-center justify-center text-xs font-bold text-white shadow-sm">4</div>
+                                    <div>
+                                        <h4 class="font-bold text-slate-800 text-sm">Plie Squat to Upright Row</h4>
+                                        <p class="text-xs text-slate-500">15 Reps • Light DBs</p>
+                                        <button onclick="openVideo('Plie Squats', 'https://www.youtube.com/embed/5D3x5a9B_5k')" class="text-violet-600 text-[10px] font-bold mt-1 flex items-center hover:underline">
+                                            <i class="fas fa-play-circle mr-1"></i> WATCH DEMO
+                                        </button>
+                                    </div>
+                                </div>
+                                <button onclick="markDone(this)" class="p-2 w-10 h-10 rounded-full border border-slate-200 transition bg-white hover:border-emerald-500"><i class="fas fa-check"></i></button>
+                            </div>
+
+                            <!-- Step 3: Cool Down -->
+                            <div class="p-3 border-l-4 border-emerald-400 bg-emerald-50/30 mt-2 rounded-r-xl">
+                                <p class="text-[10px] font-bold text-emerald-600 uppercase">Step 3: Recovery (5 mins)</p>
+                            </div>
+
+                            <div class="workout-item flex items-center justify-between p-4 bg-slate-50 rounded-2xl border border-slate-100 transition-all duration-300">
+                                <div class="flex items-center space-x-4">
+                                    <div class="w-8 h-8 bg-white rounded-full flex items-center justify-center text-xs font-bold text-emerald-500 shadow-sm">5</div>
+                                    <div>
+                                        <h4 class="font-bold text-slate-800 text-sm">Figure-4 Bench Stretch</h4>
+                                        <p class="text-xs text-slate-500">30 seconds per side • Hip release</p>
+                                        <button onclick="openVideo('Figure-4 Stretch', 'https://www.youtube.com/embed/K844rE31_9A')" class="text-violet-600 text-[10px] font-bold mt-1 flex items-center hover:underline">
+                                            <i class="fas fa-play-circle mr-1"></i> WATCH DEMO
+                                        </button>
+                                    </div>
+                                </div>
+                                <button onclick="markDone(this)" class="p-2 w-10 h-10 rounded-full border border-slate-200 transition bg-white hover:border-emerald-500"><i class="fas fa-check"></i></button>
+                            </div>
+                        </div>
+                        
+                        <div class="mt-8 text-center">
+                            <button onclick="completeWorkout()" class="bg-violet-600 text-white px-10 py-4 rounded-2xl font-bold hover:bg-violet-700 transition shadow-lg shadow-violet-200">
+                                Finish Workout
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="space-y-6">
+                    <div class="bg-slate-900 text-white rounded-3xl p-8 shadow-xl relative overflow-hidden">
+                        <div class="relative z-10">
+                            <h3 class="text-violet-400 font-bold text-[10px] uppercase tracking-widest mb-4">Sculpt Progress</h3>
+                            <div class="flex items-end space-x-2 mb-4">
+                                <span id="finished-count" class="text-4xl font-bold">12</span>
+                                <span class="text-slate-400 mb-1 text-sm">Total Finished</span>
+                            </div>
+                            <p class="text-xs text-slate-400 leading-relaxed italic">"Strength doesn't come from what you can do. It comes from overcoming the things you once thought you couldn't."</p>
+                        </div>
+                        <i class="fas fa-award absolute -bottom-6 -right-6 text-white/5 text-9xl"></i>
+                    </div>
+
+                    <div class="bg-white rounded-3xl border border-rose-100 p-6 shadow-sm">
+                        <h3 class="font-bold mb-4 text-slate-800 flex items-center">
+                            <i class="fas fa-lightbulb mr-2 text-amber-500"></i> Home Workout Tips
+                        </h3>
+                        <div class="space-y-4">
+                            <div class="flex items-start space-x-3 text-xs leading-relaxed text-slate-500">
+                                <i class="fas fa-check-circle text-violet-400 mt-0.5"></i>
+                                <p>Ensure your workout bench is on a non-slip surface before starting step-ups.</p>
+                            </div>
+                            <div class="flex items-start space-x-3 text-xs leading-relaxed text-slate-500">
+                                <i class="fas fa-check-circle text-violet-400 mt-0.5"></i>
+                                <p>Focus on exhaling during the most difficult part of the movement.</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ROUTINES LIBRARY -->
+        <section id="section-routines" class="hidden animate-fade-in">
+            <div class="mb-10">
+                <h2 class="heading-font text-4xl text-slate-900">Weekly Sculpt Plans</h2>
+                <p class="text-slate-500 mt-2">Activate a pre-set routine to your daily hub.</p>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+                <div class="bg-white rounded-3xl border border-rose-100 overflow-hidden shadow-sm hover-lift group">
+                    <div class="p-8">
+                        <span class="bg-violet-100 text-violet-600 text-[10px] font-bold px-3 py-1 rounded-full uppercase tracking-widest mb-4 inline-block">Monday • Leg Power</span>
+                        <h3 class="text-xl font-bold text-slate-900 mb-3">Foundational Leg Strength</h3>
+                        <p class="text-slate-500 text-sm mb-6 leading-relaxed">High focus on quadriceps and glute definition using the bench.</p>
+                        <button onclick="loadRoutine('Monday: Foundational Leg Strength')" class="w-full py-3 bg-slate-900 text-white rounded-2xl font-bold hover:bg-slate-800 transition">Activate Plan</button>
+                    </div>
+                </div>
+
+                <div class="bg-white rounded-3xl border border-rose-100 overflow-hidden shadow-sm hover-lift group">
+                    <div class="p-8">
+                        <span class="bg-rose-100 text-rose-600 text-[10px] font-bold px-3 py-1 rounded-full uppercase tracking-widest mb-4 inline-block">Wednesday • Definition</span>
+                        <h3 class="text-xl font-bold text-slate-900 mb-3">The "Cut" Arm Circuit</h3>
+                        <p class="text-slate-500 text-sm mb-6 leading-relaxed">High repetition dumbbell work for arms and back definition.</p>
+                        <button onclick="loadRoutine('Wednesday: The Cut Arm Circuit')" class="w-full py-3 bg-slate-900 text-white rounded-2xl font-bold hover:bg-slate-800 transition">Activate Plan</button>
+                    </div>
+                </div>
+
+                <div class="bg-white rounded-3xl border border-rose-100 overflow-hidden shadow-sm hover-lift group">
+                    <div class="p-8">
+                        <span class="bg-emerald-100 text-emerald-600 text-[10px] font-bold px-3 py-1 rounded-full uppercase tracking-widest mb-4 inline-block">Friday • Full Sculpt</span>
+                        <h3 class="text-xl font-bold text-slate-900 mb-3">Total Body Definition</h3>
+                        <p class="text-slate-500 text-sm mb-6 leading-relaxed">A blend of all equipment for maximum full body toning.</p>
+                        <button onclick="loadRoutine('Friday: Total Body Definition')" class="w-full py-3 bg-slate-900 text-white rounded-2xl font-bold hover:bg-slate-800 transition">Activate Plan</button>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- BUILDER SECTION -->
+        <section id="section-builder" class="hidden animate-fade-in">
+             <div class="mb-10">
+                <h2 class="heading-font text-4xl text-slate-900">Routine Builder</h2>
+                <p class="text-slate-500 mt-2">Personalize your 30-minute sessions with video guides.</p>
+            </div>
+
+            <div class="bg-white rounded-3xl border border-rose-100 shadow-xl overflow-hidden grid grid-cols-1 lg:grid-cols-12">
+                <div class="lg:col-span-4 p-8 border-b lg:border-b-0 lg:border-r border-rose-50 bg-rose-50/20">
+                    <div class="space-y-8">
+                        <div>
+                            <label class="block text-[10px] font-bold text-slate-400 mb-3 uppercase tracking-widest">Add to Session</label>
+                            <div class="grid grid-cols-1 gap-2">
+                                <button onclick="addExercise('Bulgarian Split Squats', 'Bench Assisted • Leg Power')" class="text-left text-sm font-medium bg-white border border-rose-100 px-4 py-3 rounded-xl hover:bg-violet-50 transition flex justify-between items-center group">
+                                    <span>+ Split Squats</span>
+                                    <i class="fas fa-plus text-slate-200 group-hover:text-violet-400 transition"></i>
+                                </button>
+                                <button onclick="addExercise('Dumbbell Rows', 'Bench Supported • Definition')" class="text-left text-sm font-medium bg-white border border-rose-100 px-4 py-3 rounded-xl hover:bg-violet-50 transition flex justify-between items-center group">
+                                    <span>+ DB Rows</span>
+                                    <i class="fas fa-plus text-slate-200 group-hover:text-violet-400 transition"></i>
+                                </button>
+                                <button onclick="addExercise('Glute Bridges', 'On Mat • Defined Glutes')" class="text-left text-sm font-medium bg-white border border-rose-100 px-4 py-3 rounded-xl hover:bg-violet-50 transition flex justify-between items-center group">
+                                    <span>+ Glute Bridges</span>
+                                    <i class="fas fa-plus text-slate-200 group-hover:text-violet-400 transition"></i>
+                                </button>
+                                <button onclick="addExercise('Tricep Dips', 'Bench Focused • Tone')" class="text-left text-sm font-medium bg-white border border-rose-100 px-4 py-3 rounded-xl hover:bg-violet-50 transition flex justify-between items-center group">
+                                    <span>+ Tricep Dips</span>
+                                    <i class="fas fa-plus text-slate-200 group-hover:text-violet-400 transition"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="lg:col-span-8 p-8 lg:p-12">
+                    <div id="builder-empty" class="h-80 flex flex-col items-center justify-center border-2 border-dashed border-rose-100 rounded-3xl text-slate-300">
+                        <i class="fas fa-clipboard-list text-5xl mb-4 text-rose-100"></i>
+                        <p class="font-medium text-slate-400 text-center">Your custom plan will appear here.</p>
+                    </div>
+                    <div id="builder-list" class="space-y-4 hidden"></div>
+                    <div id="builder-actions" class="mt-10 pt-10 border-t border-rose-50 hidden">
+                        <div class="flex justify-between items-center">
+                            <p class="text-sm font-medium text-slate-400"><span id="builder-count">0</span> moves selected</p>
+                            <div class="flex space-x-4">
+                                <button onclick="clearBuilder()" class="text-slate-400 hover:text-rose-500 font-bold transition">Clear</button>
+                                <button onclick="saveRoutine()" class="px-10 py-4 bg-violet-600 text-white rounded-2xl font-bold hover:bg-violet-700 transition shadow-lg shadow-violet-100">Save Plan</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- VIDEO MODAL -->
+    <div id="video-modal" class="fixed inset-0 z-[100] hidden bg-slate-900/90 backdrop-blur-sm flex items-center justify-center p-4">
+        <div class="modal-content bg-white w-full max-w-2xl rounded-3xl overflow-hidden shadow-2xl relative">
+            <button onclick="closeVideo()" class="absolute top-4 right-4 z-10 w-10 h-10 bg-black/10 hover:bg-black/20 rounded-full flex items-center justify-center text-slate-800 transition">
+                <i class="fas fa-times"></i>
+            </button>
+            <div class="p-6 border-b border-slate-100">
+                <h3 id="modal-video-title" class="text-xl font-bold text-slate-900">Exercise Demonstration</h3>
+                <p class="text-[10px] text-slate-400 font-bold uppercase tracking-widest mt-1">Form Perfection</p>
+            </div>
+            <div class="aspect-video bg-slate-100">
+                <iframe id="video-frame" class="w-full h-full" src="" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+            </div>
+            <div class="p-6 bg-slate-50">
+                <p class="text-sm text-slate-500 italic flex items-center">
+                    <i class="fas fa-info-circle mr-2 text-violet-500"></i>
+                    Martha, keep your core engaged to protect your lower back.
+                </p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast -->
+    <div id="toast" class="fixed bottom-8 left-1/2 -translate-x-1/2 bg-slate-900 text-white px-8 py-4 rounded-3xl shadow-2xl transition duration-300 opacity-0 pointer-events-none z-50">
+        <span id="toast-message" class="font-medium text-sm">Success!</span>
+    </div>
+
+    <script>
+        // State Management
+        let workoutState = {
+            finishedCount: 12,
+            weeklySets: 18,
+            builderExercises: []
+        };
+
+        // Navigation
+        function switchTab(tabId) {
+            document.querySelectorAll('main > section').forEach(section => section.classList.add('hidden'));
+            document.querySelectorAll('nav button[id^="tab-"]').forEach(btn => btn.classList.remove('active-tab'));
+            
+            const targetSection = document.getElementById(`section-${tabId}`);
+            if(targetSection) targetSection.classList.remove('hidden');
+            
+            const targetTab = document.getElementById(`tab-${tabId}`);
+            if(targetTab) targetTab.classList.add('active-tab');
+            
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+
+        // Dashboard Actions
+        function markDone(btn) {
+            const container = btn.closest('.workout-item');
+            const icon = btn.querySelector('i');
+            
+            if (btn.classList.contains('check-btn-done')) {
+                btn.classList.remove('check-btn-done');
+                container.classList.remove('opacity-40');
+                icon.className = 'fas fa-check';
+            } else {
+                btn.classList.add('check-btn-done');
+                container.classList.add('opacity-40');
+                icon.className = 'fas fa-check-double';
+                showToast("Movement complete! Feeling strong.");
+            }
+        }
+
+        function completeWorkout() {
+            workoutState.finishedCount++;
+            workoutState.weeklySets += 6; // Simple simulation increment
+            
+            document.getElementById('finished-count').innerText = workoutState.finishedCount;
+            document.getElementById('weekly-sets-count').innerText = `${workoutState.weeklySets} / 24`;
+            
+            showToast("Congratulations! Workout logged.");
+            
+            // Reset the check buttons for the next day simulation
+            document.querySelectorAll('.check-btn-done').forEach(btn => markDone(btn));
+            
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+
+        // Library Actions
+        function loadRoutine(name) {
+            showToast(`Activating: ${name}...`);
+            setTimeout(() => {
+                document.getElementById('routine-title-display').innerText = name;
+                switchTab('dashboard');
+                showToast("Routine Loaded!");
+            }, 800);
+        }
+
+        // Video Modal Actions
+        function openVideo(title, videoUrl) {
+            const modal = document.getElementById('video-modal');
+            const frame = document.getElementById('video-frame');
+            document.getElementById('modal-video-title').innerText = title;
+            frame.src = videoUrl;
+            modal.classList.remove('hidden');
+            setTimeout(() => modal.classList.add('active', 'flex'), 10);
+            document.body.style.overflow = 'hidden';
+        }
+
+        function closeVideo() {
+            const modal = document.getElementById('video-modal');
+            modal.classList.remove('active');
+            setTimeout(() => {
+                modal.classList.add('hidden');
+                modal.classList.remove('flex');
+                document.getElementById('video-frame').src = "";
+            }, 300);
+            document.body.style.overflow = 'auto';
+        }
+
+        // Builder Actions
+        function addExercise(name, desc) {
+            const id = Date.now();
+            workoutState.builderExercises.push({ 
+                id, 
+                name, 
+                desc, 
+                video: "https://www.youtube.com/embed/dQqApCGd5Ss" 
+            });
+            renderBuilder();
+            showToast(`Added ${name}`);
+        }
+
+        function removeExercise(id) {
+            workoutState.builderExercises = workoutState.builderExercises.filter(ex => ex.id !== id);
+            renderBuilder();
+        }
+
+        function clearBuilder() {
+            if(confirm("Discard this custom routine?")) {
+                workoutState.builderExercises = [];
+                renderBuilder();
+            }
+        }
+
+        function renderBuilder() {
+            const list = document.getElementById('builder-list');
+            const empty = document.getElementById('builder-empty');
+            const actions = document.getElementById('builder-actions');
+            
+            if (workoutState.builderExercises.length === 0) {
+                list.classList.add('hidden');
+                actions.classList.add('hidden');
+                empty.classList.remove('hidden');
+                return;
+            }
+
+            empty.classList.add('hidden');
+            list.classList.remove('hidden');
+            actions.classList.remove('hidden');
+            document.getElementById('builder-count').innerText = workoutState.builderExercises.length;
+            
+            list.innerHTML = workoutState.builderExercises.map((ex, index) => `
+                <div class="flex items-center justify-between p-4 bg-white rounded-2xl border border-rose-50 shadow-sm animate-fade-in group">
+                    <div class="flex items-center space-x-4">
+                        <div class="w-10 h-10 bg-violet-50 rounded-xl flex items-center justify-center font-bold text-violet-400 text-xs">${index + 1}</div>
+                        <div>
+                            <h4 class="font-bold text-slate-800 text-sm">${ex.name}</h4>
+                            <div class="flex space-x-3 mt-0.5">
+                                <button onclick="openVideo('${ex.name}', '${ex.video}')" class="text-[9px] font-bold text-violet-500 hover:underline">
+                                    <i class="fas fa-play mr-1 text-[7px]"></i> WATCH DEMO
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                    <button onclick="removeExercise(${ex.id})" class="p-2 text-slate-200 hover:text-rose-500 transition">
+                        <i class="fas fa-trash-alt text-sm"></i>
+                    </button>
+                </div>
+            `).join('');
+        }
+
+        function saveRoutine() {
+            if(workoutState.builderExercises.length === 0) return;
+            
+            const name = "Martha's Custom Sculpt";
+            showToast("Saving custom routine...");
+            
+            setTimeout(() => {
+                document.getElementById('routine-title-display').innerText = name;
+                workoutState.builderExercises = [];
+                renderBuilder();
+                switchTab('dashboard');
+                showToast("Custom Routine Ready!");
+            }, 1000);
+        }
+
+        // Global Helpers
+        function showToast(message) {
+            const toast = document.getElementById('toast');
+            const msgEl = document.getElementById('toast-message');
+            msgEl.innerText = message;
+            
+            toast.style.opacity = '1';
+            toast.style.transform = 'translate(-50%, -20px)';
+            
+            setTimeout(() => {
+                toast.style.opacity = '0';
+                toast.style.transform = 'translate(-50%, 0)';
+            }, 2500);
+        }
+
+        // Click Outside Modal Helper
+        document.getElementById('video-modal').addEventListener('click', function(e) {
+            if (e.target === this) closeVideo();
+        });
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', () => {
+            // Ensure proper initial tab
+            switchTab('dashboard');
+        });
+    </script>
+</body>
+</html>
